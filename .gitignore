@@ -1,0 +1,24 @@
+# ===== ビルド成果物・配布用フォルダ =====
+build/
+dist/
+dist_bak/
+old_bak/
+
+# PyInstallerや一時ファイル
+__pycache__/
+*.pyc
+*.spec
+
+# ===== 実行時データ・ローカル環境依存 =====
+data_work/
+outputs/
+
+# ===== ログ =====
+*.log
+
+# ===== 機密系（APIキーなど含まれる可能性）=====
+config.json
+data_work/config.json
+data_work/gallery.json
+data_work/scripts.json
+data_work/characters.json
