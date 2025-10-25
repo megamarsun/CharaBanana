@@ -42,8 +42,6 @@ class CharaBananaApp:
     def _init_variables(self) -> None:
         self.name_var = tk.StringVar()
         self.ref1_var = tk.StringVar()
-        self.ref2_var = tk.StringVar()
-        self.ref3_var = tk.StringVar()
 
         self.slot1_var = tk.StringVar()
         self.slot2_var = tk.StringVar()
@@ -91,9 +89,7 @@ class CharaBananaApp:
         self.base_text = tk.Text(right_frame, width=40, height=4)
         self.base_text.pack(fill="x")
 
-        self._build_ref_entry(right_frame, "参照画像1", self.ref1_var)
-        self._build_ref_entry(right_frame, "参照画像2", self.ref2_var)
-        self._build_ref_entry(right_frame, "参照画像3", self.ref3_var)
+        self._build_ref_entry(right_frame, "参照画像", self.ref1_var)
 
         ttk.Button(right_frame, text="保存 新規 or 上書き", command=self.save_char).pack(pady=4)
         ttk.Button(right_frame, text="削除", command=self.delete_char).pack()
@@ -129,8 +125,6 @@ class CharaBananaApp:
 
         refs = info.get("refs", [])
         self.ref1_var.set(refs[0] if len(refs) > 0 else "")
-        self.ref2_var.set(refs[1] if len(refs) > 1 else "")
-        self.ref3_var.set(refs[2] if len(refs) > 2 else "")
 
     def browse_file_to_var(self, var: tk.StringVar) -> None:
         path = filedialog.askopenfilename(
@@ -146,8 +140,8 @@ class CharaBananaApp:
     def save_char(self) -> None:
         name = self.name_var.get().strip()
         base_prompt = self.base_text.get("1.0", tk.END).strip()
-        refs = [self.ref1_var.get().strip(), self.ref2_var.get().strip(), self.ref3_var.get().strip()]
-        refs = [r for r in refs if r]
+        ref = self.ref1_var.get().strip()
+        refs = [ref] if ref else []
 
         if not name or not base_prompt:
             msg.showerror("エラー", "キャラ名とベースプロンプトは必須です")
@@ -174,8 +168,6 @@ class CharaBananaApp:
             self.name_var.set("")
             self.base_text.delete("1.0", tk.END)
             self.ref1_var.set("")
-            self.ref2_var.set("")
-            self.ref3_var.set("")
 
             msg.showinfo("OK", "キャラ削除したよ")
         else:
@@ -274,6 +266,7 @@ class CharaBananaApp:
             return
         if self._process_script(text, save_new=True):
             msg.showinfo("OK", "変換して保存したよ")
+            self.refresh_scripts_list()
 
     def _process_script(self, text: str, save_new: bool) -> bool:
         try:
@@ -362,7 +355,7 @@ class CharaBananaApp:
         msg.showinfo("OK", "APIキーを保存したよ")
 
     def open_apikey_page(self) -> None:
-        webbrowser.open("https://ai.google.dev/gemini-api/docs/api-key")
+        webbrowser.open("https://aistudio.google.com/app/apikey")
 
     # ------------------------------------------------------------------
     # Gallery tab
