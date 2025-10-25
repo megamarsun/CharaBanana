@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from datetime import datetime
 import webbrowser
 from typing import Optional
 
@@ -50,6 +51,7 @@ class CharaBananaApp:
         self.used_chars_var = tk.StringVar()
         self.aspect_var = tk.StringVar(value="自動")
         self.api_key_var = tk.StringVar()
+        self.local_save_dir_var = tk.StringVar()
 
     def _build_ui(self) -> None:
         notebook = ttk.Notebook(self.root)
@@ -325,6 +327,7 @@ class CharaBananaApp:
         )
         aspect_box.pack(anchor="w", pady=4)
 
+        ttk.Button(frame_send, text="ローカル保存", command=self.save_local_copy).pack(pady=4)
         ttk.Button(frame_send, text="NanoBananaへ送信", command=self.send_to_api).pack(pady=10)
 
     # ------------------------------------------------------------------
@@ -336,11 +339,22 @@ class CharaBananaApp:
 
         cfg_current = self.datastore.load_config()
         self.api_key_var.set(cfg_current.get("apiKey", ""))
+        self.local_save_dir_var.set(cfg_current.get("localSaveDir", ""))
 
         ttk.Label(frame_conf, text="NanoBanana APIキー").pack(anchor="w")
         ttk.Entry(frame_conf, textvariable=self.api_key_var, width=60, show="*").pack(fill="x")
 
-        ttk.Button(frame_conf, text="APIキー保存", command=self.save_api_key).pack(pady=4)
+        ttk.Label(frame_conf, text="ローカル保存フォルダ").pack(anchor="w", pady=(8, 0))
+        save_dir_frame = ttk.Frame(frame_conf)
+        save_dir_frame.pack(fill="x")
+        ttk.Entry(save_dir_frame, textvariable=self.local_save_dir_var, width=60).pack(
+            side="left", fill="x", expand=True
+        )
+        ttk.Button(save_dir_frame, text="参照", command=self.browse_save_dir).pack(
+            side="left", padx=4
+        )
+
+        ttk.Button(frame_conf, text="設定を保存", command=self.save_api_key).pack(pady=4)
         ttk.Button(
             frame_conf,
             text="APIキー取得ページを開く",
@@ -349,10 +363,17 @@ class CharaBananaApp:
 
     def save_api_key(self) -> None:
         key = self.api_key_var.get().strip()
+        save_dir = self.local_save_dir_var.get().strip()
         cfg = self.datastore.load_config()
         cfg["apiKey"] = key
+        cfg["localSaveDir"] = save_dir
         self.datastore.save_config(cfg)
-        msg.showinfo("OK", "APIキーを保存したよ")
+        msg.showinfo("OK", "設定を保存したよ")
+
+    def browse_save_dir(self) -> None:
+        path = filedialog.askdirectory(title="保存先フォルダを選択")
+        if path:
+            self.local_save_dir_var.set(path)
 
     def open_apikey_page(self) -> None:
         webbrowser.open("https://aistudio.google.com/app/apikey")
@@ -587,6 +608,81 @@ class CharaBananaApp:
             f"{result.output_path}\n\n"
             "テスト接続コード:"
             f" {result.test_status}",
+        )
+
+    def save_local_copy(self) -> None:
+        final_prompt_val = self.final_prompt_send_box.get("1.0", tk.END).strip()
+        if not final_prompt_val:
+            msg.showerror("エラー", "まず最終プロンプトを用意して")
+            return
+
+        slot_paths = [
+            self.slot1_var.get().strip(),
+            self.slot2_var.get().strip(),
+            self.slot3_var.get().strip(),
+        ]
+        slot_paths = [p for p in slot_paths if p]
+
+        for path in slot_paths:
+            if not os.path.isfile(path):
+                msg.showerror("エラー", f"画像が見つからないよ:\n{path}")
+                return
+
+        save_dir = self.local_save_dir_var.get().strip()
+        if not save_dir:
+            chosen = filedialog.askdirectory(title="保存先フォルダを選んでね")
+            if not chosen:
+                msg.showerror("エラー", "保存先フォルダを設定して")
+                return
+            save_dir = chosen
+            self.local_save_dir_var.set(save_dir)
+            cfg = self.datastore.load_config()
+            cfg["localSaveDir"] = save_dir
+            self.datastore.save_config(cfg)
+
+        ensure_dir(save_dir)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_name = f"prompt_{timestamp}"
+        counter = 1
+        txt_path = os.path.join(save_dir, f"{base_name}.txt")
+        while os.path.exists(txt_path):
+            counter += 1
+            txt_path = os.path.join(save_dir, f"{base_name}_{counter:02d}.txt")
+
+        base_name_with_counter = os.path.splitext(os.path.basename(txt_path))[0]
+
+        try:
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write(final_prompt_val)
+        except OSError as exc:
+            msg.showerror("エラー", f"テキストを書き出せないよ:\n{exc}")
+            return
+
+        copied_paths = []
+        for idx, src in enumerate(slot_paths, start=1):
+            ext = os.path.splitext(src)[1] or ".png"
+            dest_name = f"{base_name_with_counter}_slot{idx}{ext}"
+            dest_path = os.path.join(save_dir, dest_name)
+            try:
+                shutil.copy2(src, dest_path)
+            except OSError as exc:
+                msg.showerror("エラー", f"画像をコピーできないよ:\n{exc}")
+                return
+            copied_paths.append(dest_path)
+
+        cfg = self.datastore.load_config()
+        if cfg.get("localSaveDir") != save_dir:
+            cfg["localSaveDir"] = save_dir
+            self.datastore.save_config(cfg)
+
+        copied_text = "\n".join(copied_paths) if copied_paths else "(画像なし)"
+        msg.showinfo(
+            "完了",
+            "ローカル保存したよ:\n"
+            f"{txt_path}\n\n"
+            "コピーした画像:\n"
+            f"{copied_text}",
         )
 
     # ------------------------------------------------------------------

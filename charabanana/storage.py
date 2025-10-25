@@ -37,7 +37,9 @@ class DataStore:
 
     # Config -------------------------------------------------------------
     def load_config(self) -> Dict[str, Any]:
-        return self._load(self.paths.config_file, {"apiKey": ""})
+        return self._load(
+            self.paths.config_file, {"apiKey": "", "localSaveDir": ""}
+        )
 
     def save_config(self, data: Dict[str, Any]) -> None:
         self._write(self.paths.config_file, data)

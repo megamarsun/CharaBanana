@@ -42,7 +42,9 @@ def _ensure_data_files(data_dir: str) -> None:
     outputs_dir = os.path.join(data_dir, "outputs")
     ensure_dir(outputs_dir)
 
-    _write_json_if_missing(os.path.join(data_dir, "config.json"), {"apiKey": ""})
+    _write_json_if_missing(
+        os.path.join(data_dir, "config.json"), {"apiKey": "", "localSaveDir": ""}
+    )
     _write_json_if_missing(os.path.join(data_dir, "characters.json"), {})
     _write_json_if_missing(os.path.join(data_dir, "gallery.json"), [])
     _write_json_if_missing(os.path.join(data_dir, "scripts.json"), [])
